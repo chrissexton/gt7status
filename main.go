@@ -7,10 +7,12 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 )
 
 var addr = flag.String("addr", "127.0.0.1:8000", "address to listen to")
 var statusURL = flag.String("url", "https://www.gran-turismo.com/us/api/gt7/server/status", "GT7 Status page")
+var cacheTimeout = flag.Duration("timeout", time.Second*15, "Cache timeout")
 
 func main() {
 	flag.Parse()
@@ -22,16 +24,33 @@ func main() {
 	log.Panicln(http.ListenAndServe(*addr, nil))
 }
 
+const (
+	Unknown = "Unknown"
+	Online  = "Online"
+	Offline = "Offline"
+	Broken  = "Error"
+)
+
+var cache = Unknown
+
 func getStatus() (string, error) {
+	if cache != Unknown {
+		return cache, nil
+	}
+	time.AfterFunc(*cacheTimeout, func() {
+		cache = Unknown
+	})
 	res, err := http.Post(*statusURL, "text/html", nil)
 	if err != nil {
 		log.Println(err)
-		return "error", err
+		return Broken, err
 	}
 	if res.StatusCode < 500 {
-		return "Online", nil
+		cache = Online
+		return cache, nil
 	}
-	return "Offline", nil
+	cache = Offline
+	return cache, nil
 }
 
 func textHandler(w http.ResponseWriter, r *http.Request) {
