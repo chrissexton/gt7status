@@ -1,0 +1,3 @@
+= GT7 Status
+
+This is just a quick and simple program that extracts the useful nugget of the https://www.gran-turismo.com/us/gt7/top/[official status page] for Gran Turismo 7.
