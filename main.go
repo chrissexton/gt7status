@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -13,9 +14,10 @@ var statusURL = flag.String("url", "https://www.gran-turismo.com/us/api/gt7/serv
 
 func main() {
 	flag.Parse()
-	http.HandleFunc("/text", text)
-	http.HandleFunc("/pretty", pretty)
-	http.HandleFunc("/", pretty)
+	http.HandleFunc("/text", textHandler)
+	http.HandleFunc("/json", jsonHandler)
+	http.HandleFunc("/pretty", prettyHandler)
+	http.HandleFunc("/", prettyHandler)
 	fmt.Printf("Starting server on http://%s\n", *addr)
 	log.Panicln(http.ListenAndServe(*addr, nil))
 }
@@ -32,7 +34,7 @@ func getStatus() (string, error) {
 	return "Offline", nil
 }
 
-func text(w http.ResponseWriter, r *http.Request) {
+func textHandler(w http.ResponseWriter, r *http.Request) {
 	status, err := getStatus()
 	if err != nil {
 		w.WriteHeader(500)
@@ -42,7 +44,23 @@ func text(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, status)
 }
 
-func pretty(w http.ResponseWriter, r *http.Request) {
+func jsonHandler(w http.ResponseWriter, r *http.Request) {
+	status, err := getStatus()
+	if err != nil {
+		w.WriteHeader(500)
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+	out, err := json.Marshal(struct{ Status string }{status})
+	if err != nil {
+		w.WriteHeader(500)
+		fmt.Fprintf(w, "%s", err)
+		return
+	}
+	fmt.Fprintf(w, "%s", out)
+}
+
+func prettyHandler(w http.ResponseWriter, r *http.Request) {
 	status, _ := getStatus()
 	err := tpl.Execute(w, struct {
 		Status string
